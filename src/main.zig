@@ -1,6 +1,6 @@
 const std = @import("std");
 /// This imports the separate module containing `root.zig`. Take a look in `build.zig` for details.
-const huff = @import("huffmancode_lib");
+const huff = @import("huffman.zig");
 
 pub fn main() !void {
     var gpa = std.heap.DebugAllocator(.{}){};

@@ -76,7 +76,7 @@ pub fn buildHuffmanTree(allocator: std.mem.Allocator, n: u8, witems: []const Raw
 }
 
 const testing = std.testing;
-test "test build tree" {
+test "test buildHuffmanTree" {
     // const allocator = std.heap.page_allocator;
     const n = 5;
     const witems: [n]RawWeightedItem = [_]RawWeightedItem{
