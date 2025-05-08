@@ -3,16 +3,20 @@ const std = @import("std");
 const huff = @import("huffmancode_lib");
 
 pub fn main() !void {
+    var gpa = std.heap.DebugAllocator(.{}){};
+    const allocator = gpa.allocator();
+
     const n = 5;
     const witems: [n]huff.RawWeightedItem = [_]huff.RawWeightedItem{
-        .{ .character = 'a', .weight = 5 },
+        .{ .character = 'a', .weight = 11 },
         .{ .character = 'b', .weight = 9 },
-        .{ .character = 'c', .weight = 12 },
+        .{ .character = 'c', .weight = 3 },
         .{ .character = 'd', .weight = 13 },
         .{ .character = 'e', .weight = 16 },
     };
 
-    const huffTree = huff.buildHuffmanTree(n, witems);
-    std.debug.print("{any}", huffTree);
-    std.debug.print("Hello, world!\n", .{});
+    const huffTree = huff.buildHuffmanTree(allocator, n, witems[0..]) catch unreachable;
+    defer huffTree.deinit();
+
+    std.debug.print("{any}", .{huffTree});
 }
