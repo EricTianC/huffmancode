@@ -35,8 +35,8 @@ pub fn initialze(reader: anytype) !void {
 }
 
 pub fn encoding() !void {
-    // var bufout = std.io.bufferedWriter(std.io.getStdOut().writer());
-    // var out_writer = bufout.writer();
+    var bufout = std.io.bufferedWriter(std.io.getStdOut().writer());
+    var out_writer = bufout.writer();
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
@@ -46,11 +46,10 @@ pub fn encoding() !void {
     const toBeTran = try storage.readFromFile(allocator, "ToBeTran");
     defer allocator.free(toBeTran);
 
-    // try out_writer.print("Input file: {any}\n", .{huffmanTree});
-    // try bufout.flush();
+    try out_writer.print("Input file: '{s}'\n", .{toBeTran});
+    try bufout.flush();
 
-    const home = std.fs.cwd();
-    var output_file = try home.createFile("CodeFile", .{});
+    var output_file = try std.fs.cwd().createFile("CodeFile", .{});
     defer output_file.close();
 }
 
