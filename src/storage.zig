@@ -9,11 +9,19 @@ const std = @import("std");
 
 const head = "huff.zig:";
 
-pub fn saveHuffmanTree(huff: HuffmanTree, filepath: []const u8) !void {
+pub fn readFromFile(allocator: std.mem.Allocator, filepath: []const u8) ![]u8 {
     var home = std.fs.cwd();
     defer home.close();
+    const file = try std.fs.cwd().openFile(filepath, .{});
+    defer file.close();
 
-    var file = try home.createFile(filepath, .{});
+    const buf = try allocator.alloc(u8, try file.getEndPos());
+    _ = try file.readAll(buf);
+    return buf;
+}
+
+pub fn saveHuffmanTree(huff: HuffmanTree, filepath: []const u8) !void {
+    var file = try std.fs.cwd().createFile(filepath, .{});
     defer file.close();
 
     try file.writeAll(head);
@@ -23,37 +31,41 @@ pub fn saveHuffmanTree(huff: HuffmanTree, filepath: []const u8) !void {
     try file.writeAll(std.mem.sliceAsBytes(huff.hufftable));
 }
 
-// TODO: 改写为 bufferd，以减少 syscall
+// TODO: 改写为 buffered，以减少 syscall
 pub fn loadHuffmanTree(allocator: std.mem.Allocator, filepath: []const u8) !HuffmanTree {
-    var home = std.fs.cwd();
-    defer home.close();
+    // var home = std.fs.cwd();
+    // defer home.close();
 
-    var file = try home.openFile(filepath, .{});
+    var file = try std.fs.cwd().openFile(filepath, .{});
     defer file.close();
 
-    try file.seekTo(head.len);
+    // try file.seekTo(head.len);
 
-    var leaf_num_bytes: [1]u8 = undefined;
-    _ = try file.read(&leaf_num_bytes);
-    const leaf_num = leaf_num_bytes[0];
+    // var leaf_num_bytes: [1]u8 = undefined;
+    // _ = try file.read(&leaf_num_bytes);
+    // const leaf_num = leaf_num_bytes[0];
 
-    const vocab: []u8 = try allocator.alloc(u8, leaf_num);
-    defer allocator.free(vocab);
-    _ = try file.readAll(vocab);
+    // const vocab: []u8 = try allocator.alloc(u8, leaf_num);
+    // defer allocator.free(vocab);
+    _ = allocator;
+    // const vocab: []u8 = try allocator.alloc(u8, 0);
+    // defer allocator.free(vocab);
+    // _ = try file.readAll(vocab);
 
-    var huffnode_buf: [@sizeOf(HuffmanNode)]u8 = undefined;
-    const huff = try HuffmanTree.init(allocator, leaf_num);
+    // var huffnode_buf: [@sizeOf(HuffmanNode)]u8 = undefined;
+    // const huff = try HuffmanTree.init(allocator, leaf_num);
 
-    for (0..leaf_num) |i| {
-        huff.vocab[i] = vocab[i];
-    } // 让编译器自己优化为 memset
+    // for (0..leaf_num) |i| {
+    //     huff.vocab[i] = vocab[i];
+    // } // 让编译器自己优化为 memset
 
-    for (0..2 * leaf_num) |i| {
-        _ = try file.readAll(&huffnode_buf);
-        const huffnode = std.mem.bytesToValue(HuffmanNode, &huffnode_buf);
-        huff.hufftable[i] = huffnode;
-    }
-    return huff;
+    // for (0..2 * leaf_num) |i| {
+    //     _ = try file.readAll(&huffnode_buf);
+    //     const huffnode = std.mem.bytesToValue(HuffmanNode, &huffnode_buf);
+    //     huff.hufftable[i] = huffnode;
+    // }
+    // return huff;
+    return undefined;
 }
 
 const testing = std.testing;
