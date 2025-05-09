@@ -24,7 +24,11 @@ pub const HuffmanTree = struct {
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator, leaf_num: u8) !HuffmanTree {
-        return .{ .allocator = allocator, .leaf_num = leaf_num, .hufftable = try allocator.alloc(HuffmanNode, 2 * leaf_num) };
+        return .{
+            .allocator = allocator,
+            .leaf_num = leaf_num,
+            .hufftable = try allocator.alloc(HuffmanNode, 2 * leaf_num),
+        };
     }
 
     pub fn deinit(self: HuffmanTree) void {
@@ -89,11 +93,12 @@ test "test buildHuffmanTree" {
 
     const huffTree = buildHuffmanTree(testing.allocator, n, witems[0..]) catch unreachable;
     defer huffTree.deinit();
-    try testing.expectEqual(huffTree.hufftable[1].weight, 11);
-    try testing.expectEqual(huffTree.hufftable[2].weight, 9);
-    try testing.expectEqual(huffTree.hufftable[3].weight, 3);
-    try testing.expectEqual(huffTree.hufftable[4].weight, 13);
-    try testing.expectEqual(huffTree.hufftable[5].weight, 16);
-    try testing.expectEqual(huffTree.hufftable[6], HuffmanNode{ .weight = 12, .parent = 7, .lchild = 3, .rchild = 2 });
+    try testing.expectEqual(11, huffTree.hufftable[1].weight);
+    try testing.expectEqual(9, huffTree.hufftable[2].weight);
+    try testing.expectEqual(3, huffTree.hufftable[3].weight);
+    try testing.expectEqual(13, huffTree.hufftable[4].weight);
+    try testing.expectEqual(16, huffTree.hufftable[5].weight);
+    try testing.expectEqual(HuffmanNode{ .weight = 12, .parent = 7, .lchild = 3, .rchild = 2 }, huffTree.hufftable[6]);
+    try testing.expectEqual(HuffmanNode{ .weight = 52, .parent = 0, .lchild = 7, .rchild = 8 }, huffTree.hufftable[9]);
     // defer allocator.free(huffTree);
 }

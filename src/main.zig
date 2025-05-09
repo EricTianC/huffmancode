@@ -1,6 +1,7 @@
 const std = @import("std");
 /// This imports the separate module containing `root.zig`. Take a look in `build.zig` for details.
 const huff = @import("huffman.zig");
+const storage = @import("storage.zig");
 
 pub fn main() !void {
     var gpa = std.heap.DebugAllocator(.{}){};
@@ -18,5 +19,16 @@ pub fn main() !void {
     const huffTree = huff.buildHuffmanTree(allocator, n, witems[0..]) catch unreachable;
     defer huffTree.deinit();
 
-    std.debug.print("{any}", .{huffTree});
+    // std.debug.print("{any}", .{huffTree});
+
+    const filepath = "hfmTree";
+    try storage.saveHuffmanTree(huffTree, filepath);
+
+    std.debug.print("Huffman tree saved to {s}\n", .{filepath});
+
+    // const stdin = std.io.getStdIn().reader();
+    // const _out = std.io.getStdOut().writer();
+    // const stdout_buf = std.io.bufferedWriter(_out);
+    // const stdout = stdout_buf.writer();
+    // defer stdout_buf.flush();
 }
