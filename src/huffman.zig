@@ -16,10 +16,11 @@ pub const HuffmanNode = struct {
 
 /// 静态三叉链表实现哈夫曼树
 /// 0 号单元空闲不用
-/// 1..n 号单元存放权值结点
-/// n+1..2*n 号单元存放非权值结点
+/// 1 ~ n 号单元存放权值结点
+/// n+1 ~ 2*n - 1 号单元存放非权值结点
 pub const HuffmanTree = struct {
     leaf_num: u8,
+    vocab: []u8, // 存放 1..n 号位对应的字母
     hufftable: []HuffmanNode,
     allocator: std.mem.Allocator,
 
@@ -27,11 +28,13 @@ pub const HuffmanTree = struct {
         return .{
             .allocator = allocator,
             .leaf_num = leaf_num,
+            .vocab = try allocator.alloc(u8, leaf_num),
             .hufftable = try allocator.alloc(HuffmanNode, 2 * leaf_num),
         };
     }
 
     pub fn deinit(self: HuffmanTree) void {
+        self.allocator.free(self.vocab);
         self.allocator.free(self.hufftable);
     }
 };
@@ -41,6 +44,10 @@ pub fn buildHuffmanTree(allocator: std.mem.Allocator, n: u8, witems: []const Raw
 
     var huffTree = try HuffmanTree.init(allocator, n);
     var hufftable = huffTree.hufftable;
+
+    for (witems, 0..) |item, i| {
+        huffTree.vocab[i] = item.character;
+    }
 
     for (1..2 * n) |i| {
         hufftable[i].weight = if (i <= n) witems[i - 1].weight else 0;
@@ -93,6 +100,8 @@ test "test buildHuffmanTree" {
 
     const huffTree = buildHuffmanTree(testing.allocator, n, witems[0..]) catch unreachable;
     defer huffTree.deinit();
+
+    try testing.expectEqualDeep((&[_]u8{ 'a', 'b', 'c', 'd', 'e' }), huffTree.vocab);
     try testing.expectEqual(11, huffTree.hufftable[1].weight);
     try testing.expectEqual(9, huffTree.hufftable[2].weight);
     try testing.expectEqual(3, huffTree.hufftable[3].weight);

@@ -19,9 +19,11 @@ pub fn saveHuffmanTree(huff: HuffmanTree, filepath: []const u8) !void {
     try file.writeAll(head);
     try file.writeAll(std.mem.asBytes(&huff.leaf_num));
 
+    try file.writeAll(huff.vocab);
     try file.writeAll(std.mem.sliceAsBytes(huff.hufftable));
 }
 
+// TODO: 改写为 bufferd，以减少 syscall
 pub fn loadHuffmanTree(allocator: std.mem.Allocator, filepath: []const u8) !HuffmanTree {
     var home = std.fs.cwd();
     defer home.close();
@@ -35,9 +37,17 @@ pub fn loadHuffmanTree(allocator: std.mem.Allocator, filepath: []const u8) !Huff
     _ = try file.read(&leaf_num_bytes);
     const leaf_num = leaf_num_bytes[0];
 
-    var huffnode_buf: [@sizeOf(HuffmanNode)]u8 = undefined;
+    const vocab: []u8 = try allocator.alloc(u8, leaf_num);
+    defer allocator.free(vocab);
+    _ = try file.readAll(vocab);
 
+    var huffnode_buf: [@sizeOf(HuffmanNode)]u8 = undefined;
     const huff = try HuffmanTree.init(allocator, leaf_num);
+
+    for (0..leaf_num) |i| {
+        huff.vocab[i] = vocab[i];
+    } // 让编译器自己优化为 memset
+
     for (0..2 * leaf_num) |i| {
         _ = try file.readAll(&huffnode_buf);
         const huffnode = std.mem.bytesToValue(HuffmanNode, &huffnode_buf);
@@ -51,6 +61,7 @@ test "load huffman" {
     const huff = loadHuffmanTree(std.testing.allocator, "test_hfmTree") catch unreachable;
     defer huff.deinit();
 
+    try testing.expectEqualDeep((&[_]u8{ 'a', 'b', 'c', 'd', 'e' }), huff.vocab);
     try testing.expectEqual(11, huff.hufftable[1].weight);
     try testing.expectEqual(9, huff.hufftable[2].weight);
     try testing.expectEqual(3, huff.hufftable[3].weight);
