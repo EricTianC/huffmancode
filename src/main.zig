@@ -38,12 +38,15 @@ pub fn main() !void {
         option = try interact.scanNextChar(reader);
         option = std.ascii.toLower(option);
     }) {
-        switch (option) {
+        switch (option) { // option 已小写化
             'i' => {
                 try interact.initialze(reader);
             },
             'e' => {
                 try interact.encoding();
+            },
+            'd' => {
+                try interact.decoding();
             },
             else => {},
         }

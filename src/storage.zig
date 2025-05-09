@@ -13,9 +13,9 @@ pub fn readFromFile(allocator: std.mem.Allocator, filepath: []const u8) ![]u8 {
     const file = try std.fs.cwd().openFile(filepath, .{});
     defer file.close();
 
-    const buf = try allocator.alloc(u8, try file.getEndPos() + 1);
+    const buf = try allocator.alloc(u8, try file.getEndPos());
     _ = try file.readAll(buf);
-    buf[buf.len - 1] = 0x00;
+    // buf[buf.len - 1] = 0x00;
     return buf;
 }
 

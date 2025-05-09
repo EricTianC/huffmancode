@@ -55,21 +55,42 @@ pub fn encoding() !void {
     var output_file = try std.fs.cwd().createFile("CodeFile", .{});
     defer output_file.close();
 
-    var i: u16 = 0;
-    while (toBeTran[i] != 0x00) : (i += 1) {
-        const huffcode: []u8 = try encodeSingleChar(allocator, toBeTran[i], huffmanTree);
+    var buffered_output = std.io.bitWriter(.big, output_file.writer());
+
+    // var bitcount: u64 = 0; // 处理末尾补齐
+    for (toBeTran) |ch| {
+        const huffcode: []u8 = try encodeSingleChar(allocator, ch, huffmanTree);
         for (huffcode) |code| {
             if (code == 0x00) {
                 break;
             } else {
-                _ = try output_file.write(&[_]u8{code});
+                const bitcode: u1 = switch (code) {
+                    '0' => 0,
+                    '1' => 1,
+                    else => unreachable,
+                };
+                // _ = try output_file.write(&[_]u8{code});
+                _ = try buffered_output.writeBits(bitcode, 1);
+                // bitcount += 1;
             }
         }
         defer allocator.free(huffcode);
     }
+    try buffered_output.writeBits(@as(u1, 1), 1);
+    try buffered_output.flushBits(); // 尾字节补充 10...0
 }
 
-// 暂时只支持字母表顺序
+pub fn decoding() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+
+    const huffmanTree = try storage.loadHuffmanTree(allocator, "hfmTree");
+    defer huffmanTree.deinit();
+
+    const codeFile = try storage.readFromFile(allocator, "codeFile");
+}
+
+// 暂时只支持字母表顺序, 这里暂时就按字符传吧
 fn encodeSingleChar(allocator: std.mem.Allocator, ch: u8, huffman: huff.HuffmanTree) ![]u8 {
     // std.debug.assert(huffman.leaf_num == 26);
     std.debug.print("encoding: {c}\n", .{ch});
