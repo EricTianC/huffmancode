@@ -2,6 +2,7 @@ const std = @import("std");
 const huff = @import("huffman.zig");
 const storage = @import("storage.zig");
 
+// 因作业要求，暂限定必须按空格加字母表格式给
 pub fn initialze(reader: anytype) !void {
     var bufout = std.io.bufferedWriter(std.io.getStdOut().writer());
     var out_writer = bufout.writer();
@@ -16,7 +17,12 @@ pub fn initialze(reader: anytype) !void {
     var ch: u8 = undefined;
     var weight: u16 = undefined;
 
-    for (0..N) |i| {
+    //处理开头的空格
+    ch = ' ';
+    weight = try scanInt(u16, reader);
+    raw_inputs[0] = huff.RawWeightedItem{ .character = ch, .weight = weight };
+
+    for (1..N) |i| {
         ch = try scanNextChar(reader);
         weight = try scanInt(u16, reader);
         raw_inputs[i] = huff.RawWeightedItem{
@@ -35,8 +41,8 @@ pub fn initialze(reader: anytype) !void {
 }
 
 pub fn encoding() !void {
-    var bufout = std.io.bufferedWriter(std.io.getStdOut().writer());
-    var out_writer = bufout.writer();
+    // var bufout = std.io.bufferedWriter(std.io.getStdOut().writer());
+    // var out_writer = bufout.writer();
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
@@ -46,11 +52,49 @@ pub fn encoding() !void {
     const toBeTran = try storage.readFromFile(allocator, "ToBeTran");
     defer allocator.free(toBeTran);
 
-    try out_writer.print("Input file: '{s}'\n", .{toBeTran});
-    try bufout.flush();
-
     var output_file = try std.fs.cwd().createFile("CodeFile", .{});
     defer output_file.close();
+
+    var i: u16 = 0;
+    while (toBeTran[i] != 0x00) : (i += 1) {
+        const huffcode: []u8 = try encodeSingleChar(allocator, toBeTran[i], huffmanTree);
+        for (huffcode) |code| {
+            if (code == 0x00) {
+                break;
+            } else {
+                _ = try output_file.write(&[_]u8{code});
+            }
+        }
+        defer allocator.free(huffcode);
+    }
+}
+
+// 暂时只支持字母表顺序
+fn encodeSingleChar(allocator: std.mem.Allocator, ch: u8, huffman: huff.HuffmanTree) ![]u8 {
+    // std.debug.assert(huffman.leaf_num == 26);
+    std.debug.print("encoding: {c}\n", .{ch});
+
+    const table = huffman.hufftable;
+
+    var code = try allocator.alloc(u8, huffman.leaf_num);
+
+    code[0] = 0x00;
+    var i: u16 = 1;
+    var ht_index: u16 = undefined;
+    if (ch == ' ') {
+        ht_index = 1;
+    } else {
+        ht_index = @intCast(std.ascii.toLower(ch) - 0x60 + 1);
+    }
+
+    while (table[ht_index].parent != 0) : ({
+        i += 1;
+        ht_index = table[ht_index].parent;
+    }) {
+        code[i] = if (ht_index == table[table[ht_index].parent].lchild) '0' else '1';
+    }
+    std.mem.reverse(u8, code[0..i]);
+    return code;
 }
 
 pub fn scanInt(comptime T: type, reader: anytype) !T {
