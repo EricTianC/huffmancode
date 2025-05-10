@@ -1,8 +1,9 @@
 const std = @import("std");
 const huff = @import("huffman.zig");
 const storage = @import("storage.zig");
+const assert = std.debug.assert;
 
-// 因作业要求，暂限定必须按空格加字母表格式给
+// 因作业要求，暂限定必须按空格加字母表格式给定输入
 pub fn initialze(reader: anytype) !void {
     var bufout = std.io.bufferedWriter(std.io.getStdOut().writer());
     var out_writer = bufout.writer();
@@ -80,14 +81,67 @@ pub fn encoding() !void {
     try buffered_output.flushBits(); // 尾字节补充 10...0
 }
 
+fn getBitAt(num: u8, index: u3) u1 {
+    return @intCast((num >> index) & 0x01);
+}
+
 pub fn decoding() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
     const huffmanTree = try storage.loadHuffmanTree(allocator, "hfmTree");
     defer huffmanTree.deinit();
+    const table = huffmanTree.hufftable;
 
-    const codeFile = try storage.readFromFile(allocator, "codeFile");
+    const codeFile = try storage.readFromFile(allocator, "CodeFile");
+    defer allocator.free(codeFile);
+    var actual_bit_length: u64 = undefined;
+    var padding: u3 = 0; // 末尾填充 0 的位数
+
+    if (codeFile[codeFile.len - 1] == 0x00) {
+        return error.FileBroken;
+    }
+    while (getBitAt(codeFile[codeFile.len - 1], padding) == 0b0) {
+        padding += 1;
+    }
+
+    actual_bit_length = 8 * codeFile.len - padding - 1;
+    std.debug.print("CodeFile's actual bit length is {}.\n", .{actual_bit_length});
+
+    var output_file = try std.fs.cwd().createFile("TextFile", .{});
+    defer output_file.close();
+    var output = std.io.bufferedWriter(output_file.writer());
+
+    var out_writer = output.writer();
+
+    var wrapped_codeFile = std.io.fixedBufferStream(codeFile);
+    var bit_file_reader = std.io.bitReader(.big, wrapped_codeFile.reader());
+    var bt_index: u16 = 2 * huffmanTree.leaf_num - 1;
+
+    for (0..actual_bit_length) |_| {
+        var bitcode: u1 = undefined;
+        bitcode = try bit_file_reader.readBitsNoEof(
+            u1,
+            1,
+        );
+        std.debug.print("bitcode: {}\n", .{bitcode});
+        if (bitcode == 0b0) {
+            bt_index = table[bt_index].lchild;
+        } else {
+            bt_index = table[bt_index].rchild;
+        }
+        // _ = try output_file.write(&[_]u8{code});
+        if (bt_index <= huffmanTree.leaf_num) {
+            if (bt_index == 1) {
+                try out_writer.writeByte(' ');
+            } else {
+                try out_writer.writeByte(@intCast(bt_index - 1 + 0x60));
+            }
+            bt_index = 2 * huffmanTree.leaf_num - 1;
+        }
+    }
+
+    try output.flush();
 }
 
 // 暂时只支持字母表顺序, 这里暂时就按字符传吧
@@ -116,6 +170,67 @@ fn encodeSingleChar(allocator: std.mem.Allocator, ch: u8, huffman: huff.HuffmanT
     }
     std.mem.reverse(u8, code[0..i]);
     return code;
+}
+
+pub fn printCodeFile() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+
+    const codeFile = try storage.readFromFile(allocator, "CodeFile");
+    defer allocator.free(codeFile);
+
+    var actual_bit_length: u64 = undefined;
+    var padding: u3 = 0; // 末尾填充 0 的位数
+
+    if (codeFile[codeFile.len - 1] == 0x00) {
+        return error.FileBroken;
+    }
+    while (getBitAt(codeFile[codeFile.len - 1], padding) == 0b0) {
+        padding += 1;
+    }
+
+    actual_bit_length = 8 * codeFile.len - padding - 1;
+    std.debug.print("CodeFile's actual bit length is {}.\n", .{actual_bit_length});
+
+    var output_file = try std.fs.cwd().createFile("CodePrint", .{});
+    defer output_file.close();
+    var output = std.io.bufferedWriter(output_file.writer());
+    var out_writer = output.writer();
+
+    var wrapped_codeFile = std.io.fixedBufferStream(codeFile);
+    var bit_file_reader = std.io.bitReader(.big, wrapped_codeFile.reader());
+
+    for (0..actual_bit_length) |i| {
+        var bitcode: u1 = undefined;
+        bitcode = try bit_file_reader.readBitsNoEof(
+            u1,
+            1,
+        );
+        std.debug.print("{}", .{bitcode});
+        if (bitcode == 0b0) {
+            try out_writer.writeByte('0');
+        } else {
+            try out_writer.writeByte('1');
+        }
+
+        if ((i + 1) % 50 == 0) {
+            std.debug.print("\n", .{});
+            try out_writer.writeByte('\n');
+        }
+    }
+
+    std.debug.print("\n", .{});
+    try output.flush();
+}
+
+pub fn treePrinting() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+
+    const huffmanTree = try storage.loadHuffmanTree(allocator, "hfmTree");
+    defer huffmanTree.deinit();
+
+    
 }
 
 pub fn scanInt(comptime T: type, reader: anytype) !T {

@@ -48,6 +48,9 @@ pub fn main() !void {
             'd' => {
                 try interact.decoding();
             },
+            'p' => {
+                try interact.printCodeFile();
+            },
             else => {},
         }
     }
