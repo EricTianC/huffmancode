@@ -51,6 +51,9 @@ pub fn main() !void {
             'p' => {
                 try interact.printCodeFile();
             },
+            't' => {
+                try interact.treePrinting();
+            },
             else => {},
         }
     }

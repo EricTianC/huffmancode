@@ -1,6 +1,7 @@
 const std = @import("std");
 const huff = @import("huffman.zig");
 const storage = @import("storage.zig");
+const ds = @import("datastructure.zig");
 const assert = std.debug.assert;
 
 // 因作业要求，暂限定必须按空格加字母表格式给定输入
@@ -229,8 +230,78 @@ pub fn treePrinting() !void {
 
     const huffmanTree = try storage.loadHuffmanTree(allocator, "hfmTree");
     defer huffmanTree.deinit();
+    const table = huffmanTree.hufftable;
 
-    
+    // std.debug.print("hufftable:\n{any}\n", .{table});
+
+    var stack = try ds.Stack(u16).init(allocator);
+    defer stack.deinit();
+
+    var bufout = std.io.bufferedWriter(std.io.getStdOut().writer());
+    var out_writer = bufout.writer();
+
+    try out_writer.print("先序: \n", .{});
+
+    var index: u16 = 2 * huffmanTree.leaf_num - 1;
+
+    while (index != 0 or !stack.is_empty()) {
+        while (index != 0) {
+            if (index == 1) {
+                try out_writer.print("{d:2} ~ \tweight: {}\n", .{ index, table[index].weight });
+            } else if (index <= huffmanTree.leaf_num) {
+                try out_writer.print("{d:2} {c} \tweight: {}\n", .{
+                    index,
+                    huffmanTree.vocab[index - 1],
+                    table[index].weight,
+                });
+            } else {
+                try out_writer.print("{d:2}  \tweight: {}\n", .{
+                    index,
+                    table[index].weight,
+                });
+            }
+
+            try stack.push(index);
+            index = table[index].lchild;
+        }
+
+        if (!stack.is_empty()) {
+            index = try stack.pop();
+            index = table[index].rchild;
+        }
+    } // PreOrder
+
+    try out_writer.print("中序: \n", .{});
+
+    index = 2 * huffmanTree.leaf_num - 1;
+
+    while (index != 0 or !stack.is_empty()) {
+        while (index != 0) {
+            try stack.push(index);
+            index = table[index].lchild;
+        }
+
+        if (!stack.is_empty()) {
+            index = try stack.pop();
+            if (index == 1) {
+                try out_writer.print("{d:2} ~ \tweight: {}\n", .{ index, table[index].weight });
+            } else if (index <= huffmanTree.leaf_num) {
+                try out_writer.print("{d:2} {c} \tweight: {}\n", .{
+                    index,
+                    huffmanTree.vocab[index - 1],
+                    table[index].weight,
+                });
+            } else {
+                try out_writer.print("{d:2}  \tweight: {}\n", .{
+                    index,
+                    table[index].weight,
+                });
+            }
+            index = table[index].rchild;
+        }
+    } // InOrder
+
+    try bufout.flush();
 }
 
 pub fn scanInt(comptime T: type, reader: anytype) !T {
